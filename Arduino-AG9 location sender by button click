@@ -1,0 +1,80 @@
+#include <SoftwareSerial.h>
+
+// Define serial connection to AG9 board
+SoftwareSerial AG9Serial(10, 11); // RX, TX pins
+
+// Define the button pin
+const int buttonPin = 2;
+int buttonState = 0;
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(9600);
+  AG9Serial.begin(9600);
+
+  // Initialize button pin
+  pinMode(buttonPin, INPUT);
+
+  // Turn on GPS
+  AG9Serial.println("AT+GPS=1");
+  delay(2000); // Wait for GPS to initialize
+  readAG9Response(); // Read response to check status
+}
+
+void loop() {
+  // Check the state of the button
+  buttonState = digitalRead(buttonPin);
+
+  if (buttonState == HIGH) {
+    // If the button is pressed, get GPS location and send an SMS
+    sendSMSWithGPSLocation();
+    delay(10000); // Add a delay to prevent multiple messages
+  }
+}
+
+void sendSMSWithGPSLocation() {
+  // Request GPS location
+  AG9Serial.println("AT+LOCATION=2");
+  delay(2000); // Wait for GPS to send location data
+
+  // Read GPS data from AG9
+  String gpsData = readAG9Response();
+
+  // Parse GPS data to extract location
+  String location = parseLocation(gpsData);
+
+  // AT command to set SMS text mode
+  AG9Serial.println("AT+CMGF=1"); 
+  delay(1000);
+
+  // AT command to set the recipient's phone number
+  AG9Serial.println("AT+CMGS=\"+1234567890\""); // Replace with the actual phone number
+  delay(1000);
+
+  // The SMS text with GPS location
+  String message = "Hi, I am in Emergency, Please Help me out. Here is my GPS Location [" + location + "]";
+
+  // Send the message
+  AG9Serial.println(message);
+  delay(1000);
+
+  // ASCII code of CTRL+Z to send the message
+  AG9Serial.write(26);
+}
+
+String readAG9Response() {
+  String response = "";
+  while (AG9Serial.available()) {
+    char c = AG9Serial.read();
+    response += c;
+    delay(10);
+  }
+  Serial.println(response); // Print response to Arduino Serial Monitor
+  return response;
+}
+
+String parseLocation(String data) {
+  // Implement parsing logic to extract location from the GPS data
+  // ...
+  return "location_value"; // Replace with actual location extraction logic
+}
